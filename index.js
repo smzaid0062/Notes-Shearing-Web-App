@@ -4,6 +4,13 @@ import dotenv from "dotenv";
 import connectDB from "./config/db.js";
 
 
+//-------------------------------------
+//routes import section
+
+import authRoutes from "./routes/authRoutes.js";
+//-------------------------------------
+
+
 dotenv.config();
 connectDB();
 
@@ -11,7 +18,15 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// app.use("/api/notes", noteRoutes);
+
+
+app.use("/api/auth", authRoutes);
+
+
+
+
+
+
 
 app.get("/", (req, res) => {
   res.send("Note Shear Backend Running...");
