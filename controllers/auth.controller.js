@@ -1,13 +1,25 @@
-import User from "../models/User.js";
+import User from "../models/user.model.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import { generateToken } from "../middleware/GenerateToken.js";
 
 //----------------------------------------
+
+// cookie meta data
+const cookieOptions = {
+  maxAge: 7 * 24 * 60 * 60 * 1000, //7 days
+  httpOnly: true,
+  secure: true,
+  sameSite: 'None', 
+}
+//----------------------------------------
+
 
 //Register function
 
 export const registerUser = async (req, res) => {
   try {
+    console.log(req.body)
     const { name, email, password, course, year } = req.body;
 
     if (!name || !email || !password || !course || !year) {
@@ -67,25 +79,102 @@ export const loginUser = async (req, res) => {
       return res.status(400).json({ message: "Invalid email or password" });
     }
 
-    const token = jwt.sign(
-      { id: user._id },
-      process.env.JWT_SECRET,
-      { expiresIn: "7d" }
-    );
+    //generate token and save cookie
+    const token = generateToken(user);
 
-    res.json({
-      message: "Login successful",
-      token,
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        course: user.course,
-        year: user.year
-      }
+     res.cookie('token', token, cookieOptions);
+
+
+ res.status(200).json({
+      success: true,
+      message: "User login successfully",
+      user,
     });
 
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 };
+
+
+
+//logout
+export const logoutUser = (req, res) => {
+  res.clearCookie("token", {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
+    path: "/"
+  });
+
+  res.status(200).json({
+    success: true,
+    message: "User logged out successfully"
+  });
+};
+
+
+// Get logged-in user
+export const getMe = async (req, res) => {
+  try {
+    res.status(200).json({
+      success: true,
+      user: req.user
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Server error"
+    });
+  }
+};
+
+
+
+
+
+// Update user profile
+export const updateUserProfile = async (req, res,next) => {
+  try {
+    const { name, email, course, year } = req.body;
+
+    // Validation
+    if (!name || !email) {
+      return res.status(400).json({
+        message: "Name and email are required"
+      });
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(
+      req.user.id,   // coming from auth middleware
+      {
+        name,
+        email,
+        course,
+        year
+      },
+      {
+        new: true,
+        runValidators: true
+      }
+    ).select("-password"); // never send password back
+
+    if (!updatedUser) {
+      return res.status(404).json({
+        message: "User not found"
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Profile updated successfully",
+      user: updatedUser
+    });
+
+  } catch (error) {
+    console.error("Error updating profile:", error);
+    res.status(500).json({
+      message: "Server error"
+    });
+  }
+};
+

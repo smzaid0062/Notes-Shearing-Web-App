@@ -2,12 +2,13 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import connectDB from "./config/db.js";
+import cookieParser from "cookie-parser";
 
 
 //-------------------------------------
 //routes import section
 
-import authRoutes from "./routes/authRoutes.js";
+import authRoutes from "./routes/auth.routes.js";
 //-------------------------------------
 
 
@@ -17,7 +18,10 @@ connectDB();
 const app = express();
 app.use(cors());
 app.use(express.json());
+app.use(cookieParser());
 
+// for form data (urlencoded)
+app.use(express.urlencoded({ extended: true }));
 
 
 app.use("/api/auth", authRoutes);
